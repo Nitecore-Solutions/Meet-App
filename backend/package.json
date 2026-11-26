@@ -1,0 +1,52 @@
+{
+  "name": "pagalpagal-backend",
+  "version": "1.0.0",
+  "private": true,
+  "description": "PagalPagal API: email/password auth, real-time chat, local media, Razorpay subscriptions",
+  "main": "dist/index.js",
+  "type": "commonjs",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit",
+    "smoke": "node scripts/smoke.mjs",
+    "schema": "node scripts/export-schema.mjs",
+    "db:setup": "bash scripts/setup-postgres.sh",
+    "deploy": "bash scripts/deploy.sh"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "keywords": [
+    "pagalpagal",
+    "dating",
+    "chat",
+    "websocket",
+    "razorpay",
+    "postgresql"
+  ],
+  "license": "UNLICENSED",
+  "dependencies": {
+    "cors": "^2.8.6",
+    "dotenv": "^18.0.10",
+    "express": "^5.3.0",
+    "express-rate-limit": "^8.7.5",
+    "helmet": "^8.3.0",
+    "jsonwebtoken": "^9.0.3",
+    "pg": "^8.23.1",
+    "ws": "^8.23.0",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.5.17",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/node": "^26.6.6",
+    "@types/pg": "^8.23.1",
+    "@types/ws": "^8.18.2",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2"
+  }
+}
