@@ -5,6 +5,14 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
+# Make .env values (especially DATABASE_URL) available to this shell so the
+# schema is applied as the app role, not as the postgres OS user.
+if [ -f .env ]; then
+  set -a
+  . ./.env
+  set +a
+fi
+
 DB_NAME="${DB_NAME:-pagalpagal}"
 DB_USER="${DB_USER:-pagalpagal}"
 DB_PASSWORD="${DB_PASSWORD:-}"
@@ -56,6 +64,11 @@ if [ -n "${DATABASE_URL:-}" ]; then
 else
   node scripts/export-schema.mjs | sudo -u postgres psql -d "$DB_NAME" -v ON_ERROR_STOP=1
 fi
+
+# Repair ownership if the database was created by an earlier run as postgres.
+for t in users auth_tokens refresh_tokens media user_photos likes passes blocks matches messages read_states billing_checkouts subscriptions webhook_events; do
+  sudo -u postgres psql -q -d "$DB_NAME" -c "ALTER TABLE $t OWNER TO $DB_USER;"
+done
 
 echo "==> PostgreSQL is ready."
 echo "DATABASE_URL=postgresql://${DB_USER}:<password>@127.0.0.1:5432/${DB_NAME}"
