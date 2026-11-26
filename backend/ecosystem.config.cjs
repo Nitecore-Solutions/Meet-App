@@ -7,9 +7,7 @@ module.exports = {
       instances: 1,
       exec_mode: "fork",
       max_memory_restart: "1G",
-      env: {
-        NODE_ENV: "production",
-      },
+      // NODE_ENV and all secrets come from backend/.env, never from here.
     },
   ],
 };
