@@ -17,6 +17,9 @@ import { discoverRouter, likesRouter, usersRouter } from "./routes/users";
 export function createApp() {
   const app = express();
   app.disable("x-powered-by");
+  // Requests arrive through Cloudflare's proxy; trust one hop so
+  // express-rate-limit and logs use the visitor's real IP.
+  app.set("trust proxy", 1);
   app.use(
     helmet({
       crossOriginResourcePolicy: { policy: "cross-origin" },
