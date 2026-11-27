@@ -23,6 +23,7 @@ import { ageFromDate } from "../utils/format";
 
 const SESSION_KEY = "@pagalpagal/session/v1";
 const PROFILE_KEY = "@pagalpagal/profile/v1";
+const ACCOUNT_KEY = "@pagalpagal/account-created/v1";
 
 type BackendUser = {
   id?: string;
@@ -55,6 +56,7 @@ type AuthContextValue = {
   user: MyProfile | null;
   signedIn: boolean;
   apiEnabled: boolean;
+  accountCreated: boolean;
   /** Legacy mock-mode helpers (used by Welcome/Facebook preview). */
   signIn: (contact: string) => Promise<void>;
   signUp: (draft: SignUpDraft) => Promise<void>;
@@ -132,6 +134,7 @@ function fromDraft(draft: RegisterInput): MyProfile {
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [ready, setReady] = useState(false);
   const [signedIn, setSignedIn] = useState(false);
+  const [accountCreated, setAccountCreated] = useState(false);
   const [user, setUser] = useState<MyProfile | null>(null);
 
   const persistProfile = useCallback((next: MyProfile) => {
@@ -161,12 +164,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     let mounted = true;
     (async () => {
       try {
-        const [session, storedProfile, token] = await Promise.all([
+        const [session, storedProfile, token, created] = await Promise.all([
           AsyncStorage.getItem(SESSION_KEY),
           AsyncStorage.getItem(PROFILE_KEY),
           getAccessToken(),
+          AsyncStorage.getItem(ACCOUNT_KEY),
         ]);
         if (!mounted) return;
+        if (created) setAccountCreated(created === "true");
         if (storedProfile) setUser(JSON.parse(storedProfile) as MyProfile);
         if (apiConfigured && token) {
           try {
@@ -244,6 +249,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 
   const registerWithOtp = useCallback(async (input: RegisterInput) => {
+    if (accountCreated) {
+      throw new Error("Your account already exists. Please sign in instead.");
+    }
     pendingDraft = input;
     if (!apiConfigured) return { verificationRequired: true, devCode: "123456", email: input.email };
     return apiFetch<OtpResponse>("/api/auth/register", {
@@ -259,31 +267,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         interestedIn: input.interestedIn,
       },
     });
-  }, []);
+  }, [accountCreated]);
 
   const verifySignupOtp = useCallback(
     async (email: string, code: string) => {
-      if (!apiConfigured) {
-        await signUp(pendingDraft ?? {
-          name: "",
-          day: "",
-          month: "",
-          year: "",
-          gender: "man",
-          interestedIn: "women",
-          city: "",
-          cityState: "",
+      if (apiConfigured) {
+        // Verification only confirms the account. Do not start a session here:
+        // the user must sign in with email + password next.
+        await apiFetch<SessionResponse>("/api/auth/verify-email", {
+          method: "POST",
+          body: { email, code },
         });
-        return;
       }
-      const result = await apiFetch<SessionResponse>("/api/auth/verify-email", {
-        method: "POST",
-        body: { email, code },
-      });
-      await finishSession(result.tokens, result.user);
+      await clearTokens().catch(() => {});
+      setAccountCreated(true);
+      await AsyncStorage.setItem(ACCOUNT_KEY, "true").catch(() => {});
       pendingDraft = null;
     },
-    [finishSession, signUp]
+    []
   );
 
   const resendOtp = useCallback(async (email: string, purpose: OtpPurpose) => {
@@ -333,6 +334,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       user,
       signedIn,
       apiEnabled: apiConfigured,
+      accountCreated,
       signIn,
       signUp,
       requestLoginOtp,
@@ -348,6 +350,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       ready,
       user,
       signedIn,
+      accountCreated,
       signIn,
       signUp,
       requestLoginOtp,

@@ -14,6 +14,7 @@ import { ArrowRight } from "lucide-react-native";
 import { BrandLockup } from "../../components/Brand";
 import { PrimaryButton } from "../../components/Buttons";
 import { APP_TAGLINE } from "../../constants/config";
+import { useAuth } from "../../context/AuthContext";
 import { colors, radii, spacing } from "../../constants/theme";
 import { useToast } from "../../context/ToastContext";
 import { profilePhotos } from "../../data/images";
@@ -23,6 +24,7 @@ type Props = NativeStackScreenProps<AuthStackParamList, "Welcome">;
 
 export function WelcomeScreen({ navigation }: Props) {
   const { showToast } = useToast();
+  const { accountCreated } = useAuth();
 
   function showTerms() {
     Alert.alert(
@@ -67,13 +69,15 @@ export function WelcomeScreen({ navigation }: Props) {
 
         <View style={styles.actions}>
           <PrimaryButton
-            label="SIGN UP NOW"
+            label={accountCreated ? "SIGN IN" : "SIGN UP NOW"}
             pill
-            onPress={() => navigation.navigate("SignUp")}
+            onPress={() =>
+              navigation.navigate(accountCreated ? "Login" : "SignUp")
+            }
             iconRight={<ArrowRight size={18} color={colors.white} strokeWidth={2.4} />}
           />
           <PrimaryButton
-            label="SIGN UP WITH GOOGLE"
+            label={accountCreated ? "SIGN IN WITH GOOGLE" : "SIGN UP WITH GOOGLE"}
             pill
             variant="secondary"
             onPress={handleSocial}

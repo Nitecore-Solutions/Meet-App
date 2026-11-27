@@ -1,6 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const BASE_URL = (process.env.EXPO_PUBLIC_API_BASE_URL ?? "").replace(/\/+$/, "");
+const FALLBACK_URL = (process.env.EXPO_PUBLIC_API_FALLBACK_URL ?? "https://pintupay.in").replace(/\/+$/, "");
 const ACCESS_KEY = "@pagalpagal/access-token";
 const REFRESH_KEY = "@pagalpagal/refresh-token";
 
@@ -34,20 +35,41 @@ export async function apiFetch<T>(
   if (options.body !== undefined) headers["Content-Type"] = "application/json";
   if (options.token) headers.Authorization = `Bearer ${options.token}`;
 
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 15_000);
+  async function call(base: string): Promise<Response> {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15_000);
+    try {
+      return await fetch(`${base}${path}`, {
+        method: options.method ?? "GET",
+        headers,
+        body: options.body === undefined ? undefined : JSON.stringify(options.body),
+        signal: controller.signal,
+      });
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+
   let response: Response;
   try {
-    response = await fetch(`${BASE_URL}${path}`, {
-      method: options.method ?? "GET",
-      headers,
-      body: options.body === undefined ? undefined : JSON.stringify(options.body),
-      signal: controller.signal,
-    });
+    response = await call(BASE_URL);
   } catch {
-    throw new ApiError("NETWORK_ERROR", "Could not reach the server. Check your connection.", 0);
-  } finally {
-    clearTimeout(timeout);
+    if (!FALLBACK_URL || FALLBACK_URL === BASE_URL) {
+      throw new ApiError(
+        "NETWORK_ERROR",
+        `Could not reach ${new URL(BASE_URL).host}. Check your connection.`,
+        0
+      );
+    }
+    try {
+      response = await call(FALLBACK_URL);
+    } catch {
+      throw new ApiError(
+        "NETWORK_ERROR",
+        `Could not reach ${new URL(BASE_URL).host} or ${new URL(FALLBACK_URL).host}. Check your connection.`,
+        0
+      );
+    }
   }
 
   const payload = (await response.json().catch(() => ({}))) as {

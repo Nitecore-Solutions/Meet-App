@@ -14,6 +14,7 @@ import { BackButton, PrimaryButton } from "../../components/Buttons";
 import { ErrorBanner } from "../../components/Form";
 import { colors, radii, spacing } from "../../constants/theme";
 import { useAuth } from "../../context/AuthContext";
+import { useToast } from "../../context/ToastContext";
 import type { AuthStackParamList } from "../../navigation/types";
 
 type Props = NativeStackScreenProps<AuthStackParamList, "Otp">;
@@ -21,6 +22,7 @@ type Props = NativeStackScreenProps<AuthStackParamList, "Otp">;
 export function OtpScreen({ navigation, route }: Props) {
   const { email, mode, devCode } = route.params;
   const { verifySignupOtp, verifyLoginOtp, resendOtp, apiEnabled } = useAuth();
+  const { showToast } = useToast();
   const [code, setCode] = useState(devCode ?? "");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -41,8 +43,13 @@ export function OtpScreen({ navigation, route }: Props) {
     setError(null);
     setBusy(true);
     try {
-      if (mode === "signup") await verifySignupOtp(email, code);
-      else await verifyLoginOtp(email, code);
+      if (mode === "signup") {
+        await verifySignupOtp(email, code);
+        showToast("Account verified. Please sign in with your email and password.", "success");
+        navigation.reset({ index: 0, routes: [{ name: "Login" }] });
+        return;
+      }
+      await verifyLoginOtp(email, code);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "That code could not be verified.");
       setBusy(false);
