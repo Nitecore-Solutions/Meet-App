@@ -109,8 +109,8 @@ EMAIL_DEV_MODE=false
 BREVO_API_KEY=your-key
 BREVO_FROM_EMAIL=noreply@yourdomain.com
 BREVO_FROM_NAME=PagalPagal
-BREVO_TEMPLATE_VERIFY_ID=12345
-BREVO_TEMPLATE_RESET_ID=67890
+BREVO_TEMPLATE_VERIFY_ID=1
+BREVO_TEMPLATE_RESET_ID=2
 ```
 
 The provider calls Brevo's `POST /v3/smtp/email`. When template IDs are set it
