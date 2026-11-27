@@ -11,6 +11,7 @@ import {
   verifyEmail,
   verifyLoginOtp,
 } from "../services/email-auth";
+import { googleSignIn } from "../services/google-auth";
 import { revokeRefreshToken, rotateRefreshToken } from "../services/tokens";
 import { findUserById, serializeOwnProfile } from "../services/users";
 import { unauthorized } from "../utils/errors";
@@ -65,8 +66,14 @@ const resetSchema = z.object({
 const refreshSchema = z.object({
   refreshToken: z.string().trim().min(20).max(500),
 });
+const googleSchema = z.object({ idToken: z.string().trim().min(10) });
 
 authRouter.use(authLimiter);
+
+authRouter.post("/google", credentialLimiter, async (req, res) => {
+  const { idToken } = parseBody(googleSchema, req.body);
+  res.json(await googleSignIn(idToken));
+});
 
 authRouter.post("/register", credentialLimiter, async (req, res) => {
   res.status(201).json(await register(parseBody(registerSchema, req.body)));

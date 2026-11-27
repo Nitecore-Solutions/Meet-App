@@ -99,6 +99,9 @@ export const config = {
     accessTokenTtl: process.env.ACCESS_TOKEN_TTL ?? "1h",
     refreshTokenTtlDays: readNumber("REFRESH_TOKEN_TTL_DAYS", 30),
   },
+  google: {
+    clientId: process.env.GOOGLE_CLIENT_ID ?? "",
+  },
   email: {
     provider: emailProvider,
     devMode: emailDevMode,

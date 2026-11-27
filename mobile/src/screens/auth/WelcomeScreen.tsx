@@ -13,6 +13,7 @@ import { ArrowRight } from "lucide-react-native";
 
 import { BrandLockup } from "../../components/Brand";
 import { PrimaryButton } from "../../components/Buttons";
+import { GoogleButton } from "../../components/GoogleButton";
 import { APP_TAGLINE } from "../../constants/config";
 import { useAuth } from "../../context/AuthContext";
 import { colors, radii, spacing } from "../../constants/theme";
@@ -76,13 +77,7 @@ export function WelcomeScreen({ navigation }: Props) {
             }
             iconRight={<ArrowRight size={18} color={colors.white} strokeWidth={2.4} />}
           />
-          <PrimaryButton
-            label={accountCreated ? "SIGN IN WITH GOOGLE" : "SIGN UP WITH GOOGLE"}
-            pill
-            variant="secondary"
-            onPress={handleSocial}
-            icon={<Text style={styles.googleLetter}>G</Text>}
-          />
+          <GoogleButton onPress={handleSocial} />
           <PrimaryButton
             label="LOGIN"
             pill
@@ -166,12 +161,7 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     marginTop: spacing.xl,
   },
-  googleLetter: {
-    color: "#4285F4",
-    fontWeight: "900",
-    fontSize: 18,
-    lineHeight: 20,
-  },
+
   terms: {
     fontSize: 10.5,
     lineHeight: 16,

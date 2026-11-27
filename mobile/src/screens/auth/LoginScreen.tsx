@@ -13,6 +13,7 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { Eye, EyeOff } from "lucide-react-native";
 
 import { BackButton, PrimaryButton } from "../../components/Buttons";
+import { GoogleButton } from "../../components/GoogleButton";
 import { ErrorBanner, TextField } from "../../components/Form";
 import { colors, radii, spacing } from "../../constants/theme";
 import { useAuth } from "../../context/AuthContext";
@@ -128,16 +129,13 @@ export function LoginScreen({ navigation }: Props) {
               <View style={styles.orLine} />
             </View>
 
-            <PrimaryButton
-              label="CONTINUE WITH GOOGLE"
-              variant="secondary"
+            <GoogleButton
               onPress={() =>
                 showToast(
                   "Google sign-in will be available once OAuth is configured.",
                   "info"
                 )
               }
-              icon={<Text style={styles.googleLetter}>G</Text>}
             />
           </View>
 
@@ -207,11 +205,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: colors.muted,
     fontWeight: "600",
-  },
-  googleLetter: {
-    color: "#4285F4",
-    fontWeight: "900",
-    fontSize: 17,
   },
   spacer: {
     flex: 1,

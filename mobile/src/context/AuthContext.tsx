@@ -64,6 +64,7 @@ type AuthContextValue = {
   requestLoginOtp: (email: string, password: string) => Promise<OtpResponse>;
   verifyLoginOtp: (email: string, code: string) => Promise<void>;
   registerWithOtp: (input: RegisterInput) => Promise<OtpResponse>;
+  signInWithGoogle: (idToken: string) => Promise<void>;
   verifySignupOtp: (email: string, code: string) => Promise<void>;
   resendOtp: (email: string, purpose: OtpPurpose) => Promise<SimpleResponse>;
   forgotPassword: (email: string) => Promise<SimpleResponse>;
@@ -287,6 +288,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     []
   );
 
+  const signInWithGoogle = useCallback(
+    async (idToken: string) => {
+      if (!apiConfigured) throw new Error("Backend URL is not configured.");
+      const result = await apiFetch<SessionResponse>("/api/auth/google", {
+        method: "POST",
+        body: { idToken },
+      });
+      setAccountCreated(true);
+      await AsyncStorage.setItem(ACCOUNT_KEY, "true").catch(() => {});
+      await finishSession(result.tokens, result.user);
+    },
+    [finishSession]
+  );
+
   const resendOtp = useCallback(async (email: string, purpose: OtpPurpose) => {
     if (!apiConfigured) return { ok: true, devCode: "123456" };
     return apiFetch<SimpleResponse>("/api/auth/resend-otp", {
@@ -340,6 +355,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       requestLoginOtp,
       verifyLoginOtp,
       registerWithOtp,
+      signInWithGoogle,
       verifySignupOtp,
       resendOtp,
       forgotPassword,
@@ -356,6 +372,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       requestLoginOtp,
       verifyLoginOtp,
       registerWithOtp,
+      signInWithGoogle,
       verifySignupOtp,
       resendOtp,
       forgotPassword,
