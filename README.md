@@ -142,9 +142,10 @@ starts the API with PM2.
 
 The UI is structured so these APIs can replace the mock layer without rewriting
 screens: `src/data/*` holds seed content, contexts own persisted state, and
-screens call context actions. Set `EXPO_PUBLIC_API_BASE_URL` in `mobile/.env`
-to switch the login/signup/OTP screens from preview mode to the real API; the
-AuthContext then calls `/api/auth/*` and stores tokens. The remaining step is
+screens call context actions. Copy `mobile/.env.example` to `mobile/.env` and
+set `EXPO_PUBLIC_API_BASE_URL=https://api.pintupay.in` to switch the
+login/signup/OTP screens from preview mode to the real API; the AuthContext then
+calls `/api/auth/*` and stores tokens. The remaining step is
 to connect chat, media and billing screens to `/api/chats`, `/api/media` and
 `/api/billing`.
 

@@ -64,6 +64,40 @@ export function createApp() {
     });
   });
 
+  // The emailed reset link lands here. Render a tiny form that completes the
+  // reset against the API, so the link works even before a web app exists.
+  app.get("/reset-password", (req, res) => {
+    const token = typeof req.query.token === "string" ? req.query.token : "";
+    res.type("html").send(`<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Reset your PagalPagal password</title>
+<style>body{font-family:Arial,sans-serif;background:#f4f6f8;color:#1a1a2e;margin:0;padding:40px 16px}
+.card{max-width:420px;margin:auto;background:#fff;border-radius:12px;padding:32px;box-shadow:0 2px 8px rgba(0,0,0,.08)}
+input{width:100%;box-sizing:border-box;padding:12px;margin:10px 0 18px;border:1px solid #cbd5e0;border-radius:8px;font-size:15px}
+button{width:100%;padding:14px;border:0;border-radius:8px;background:#f5c518;font-weight:bold;cursor:pointer}
+#msg{margin-top:16px;font-size:14px}</style></head>
+<body><div class="card">
+<h2>Choose a new password</h2>
+<p style="color:#4a5568;font-size:14px">Enter a new password for your PagalPagal account.</p>
+<form id="f"><input type="password" id="pw" minlength="8" placeholder="New password (8+ characters)" required>
+<button type="submit">Reset password</button></form>
+<p id="msg"></p></div>
+<script>
+document.getElementById('f').addEventListener('submit', async function(e){
+  e.preventDefault();
+  var msg=document.getElementById('msg');
+  try{
+    var r=await fetch('/api/auth/reset-password',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({token:${JSON.stringify(token)},password:document.getElementById('pw').value})});
+    var d=await r.json();
+    msg.textContent = r.ok ? 'Password updated. You can now sign in.' : (d.error&&d.error.message)||'Could not reset the password.';
+    msg.style.color = r.ok ? '#0e7a4e' : '#c53030';
+    if(r.ok) document.getElementById('f').reset();
+  }catch(err){msg.textContent='Could not reach the server.';}
+});
+</script></body></html>`);
+  });
+
   app.get("/health", async (_req, res) => {
     const startedAt = Date.now();
     await queryOne("SELECT 1 AS ok");
