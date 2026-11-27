@@ -34,15 +34,20 @@ export async function apiFetch<T>(
   if (options.body !== undefined) headers["Content-Type"] = "application/json";
   if (options.token) headers.Authorization = `Bearer ${options.token}`;
 
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 15_000);
   let response: Response;
   try {
     response = await fetch(`${BASE_URL}${path}`, {
       method: options.method ?? "GET",
       headers,
       body: options.body === undefined ? undefined : JSON.stringify(options.body),
+      signal: controller.signal,
     });
   } catch {
     throw new ApiError("NETWORK_ERROR", "Could not reach the server. Check your connection.", 0);
+  } finally {
+    clearTimeout(timeout);
   }
 
   const payload = (await response.json().catch(() => ({}))) as {
