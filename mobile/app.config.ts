@@ -16,6 +16,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   android: {
     package: "com.pagalpagal.app",
     versionCode: 1,
+    // Needed for the direct-IP HTTP backend while the domain points elsewhere.
+    // @ts-expect-error supported by Expo builds but not in this SDK's TS type
+    usesCleartextTraffic: true,
     adaptiveIcon: {
       foregroundImage: "./assets/adaptive-icon.png",
       backgroundColor: "#FF5A1F",
