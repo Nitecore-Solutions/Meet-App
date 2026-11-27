@@ -196,14 +196,31 @@ async function registerUser(name) {
     "register"
   );
   assert.equal(registered.verificationRequired, true);
-  assert.match(registered.devToken ?? "", /.{20,}/, "Dev verification token should be exposed");
+  assert.match(registered.devCode ?? "", /^\d{6}$/, "Dev verification code should be exposed");
   const verified = ok(
-    await request("POST", "/api/auth/verify-email", { body: { token: registered.devToken } }),
+    await request("POST", "/api/auth/verify-email", {
+      body: { email, code: registered.devCode },
+    }),
     "verify-email"
   );
   assert.equal(verified.user.emailVerified, true);
   assert.ok(verified.tokens.accessToken);
   return { email, userId: registered.user.id, token: verified.tokens.accessToken, refreshToken: verified.tokens.refreshToken };
+}
+
+async function loginWithOtp(email, password) {
+  const started = ok(
+    await request("POST", "/api/auth/login", { body: { email, password } }),
+    "login otp request"
+  );
+  assert.equal(started.otpRequired, true, "Login must require an email OTP");
+  assert.match(started.devCode ?? "", /^\d{6}$/, "Dev login code should be exposed");
+  return ok(
+    await request("POST", "/api/auth/verify-login-otp", {
+      body: { email, code: started.devCode },
+    }),
+    "verify login otp"
+  );
 }
 
 async function uploadAndComplete(token, file) {
@@ -300,15 +317,12 @@ async function run() {
   let token = alice.token;
   let refreshToken = alice.refreshToken;
 
-  const loginResult = ok(
-    await request("POST", "/api/auth/login", { body: { email: alice.email, password: PASSWORD } }),
-    "login"
-  );
+  const loginResult = await loginWithOtp(alice.email, PASSWORD);
   assert.equal(loginResult.user.emailVerified, true);
   assert.ok(loginResult.tokens.accessToken);
 
   const unverifiedEmail = `pending-${Date.now()}@smoke.test`;
-  const pending = ok(
+  ok(
     await request("POST", "/api/auth/register", { body: { email: unverifiedEmail, password: PASSWORD } }),
     "register pending"
   );
@@ -318,11 +332,18 @@ async function run() {
   assert.equal(blockedLogin.status, 403, "Unverified accounts must not be able to sign in");
   assert.equal(blockedLogin.body.error.code, "EMAIL_NOT_VERIFIED");
   const resent = ok(
-    await request("POST", "/api/auth/resend-verification", { body: { email: unverifiedEmail } }),
-    "resend verification"
+    await request("POST", "/api/auth/resend-otp", {
+      body: { email: unverifiedEmail, purpose: "verify_email" },
+    }),
+    "resend verification otp"
   );
-  assert.match(resent.devToken ?? "", /.{20,}/);
-  await request("POST", "/api/auth/verify-email", { body: { token: pending.devToken } });
+  assert.match(resent.devCode ?? "", /^\d{6}$/);
+  ok(
+    await request("POST", "/api/auth/verify-email", {
+      body: { email: unverifiedEmail, code: resent.devCode },
+    }),
+    "verify with resent code"
+  );
   console.log("  auth: register, email verification, sign-in gating, resend + login OK");
 
   // Profile read/update and discovery with real accounts (no demo data).
@@ -418,12 +439,7 @@ async function run() {
     }),
     "reset password"
   );
-  const afterReset = ok(
-    await request("POST", "/api/auth/login", {
-      body: { email: alice.email, password: "NewSmoke@456" },
-    }),
-    "login with new password"
-  );
+  const afterReset = await loginWithOtp(alice.email, "NewSmoke@456");
   // Password reset deliberately revokes all existing sessions.
   token = afterReset.tokens.accessToken;
   refreshToken = afterReset.tokens.refreshToken;

@@ -102,16 +102,22 @@ export const config = {
   email: {
     provider: emailProvider,
     devMode: emailDevMode,
-    // Frontend origin used to build verification and password-reset links.
+    // Frontend origin used to build password-reset links.
     appUrl: (process.env.APP_URL ?? "http://localhost:8081").replace(/\/+$/, ""),
-    verifyTtlMinutes: readNumber("EMAIL_VERIFY_TTL_MINUTES", 1440),
-    resetTtlMinutes: readNumber("EMAIL_RESET_TTL_MINUTES", 60),
+    otpTtlMinutes: readNumber("EMAIL_OTP_TTL_MINUTES", 10),
+    loginOtpTtlMinutes: readNumber("EMAIL_LOGIN_OTP_TTL_MINUTES", 5),
+    resetTtlMinutes: readNumber("EMAIL_RESET_TTL_MINUTES", 30),
     resendSeconds: readNumber("EMAIL_RESEND_SECONDS", 60),
     maxTokensPerHour: readNumber("EMAIL_MAX_TOKENS_PER_HOUR", 5),
+    maxOtpAttempts: readNumber("EMAIL_MAX_OTP_ATTEMPTS", 5),
     brevo: {
       apiKey: brevoApiKey,
       fromEmail: brevoFromEmail,
       fromName: process.env.BREVO_FROM_NAME ?? "PagalPagal",
+      // Brevo template IDs. Templates use params.name / params.OTP and
+      // params.name / params.reset_link.
+      verifyTemplateId: process.env.BREVO_TEMPLATE_VERIFY_ID ?? "",
+      resetTemplateId: process.env.BREVO_TEMPLATE_RESET_ID ?? "",
     },
   },
   // Media is always stored on this server's disk; there is no object-storage driver.

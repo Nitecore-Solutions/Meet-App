@@ -88,14 +88,21 @@ CREATE TABLE IF NOT EXISTS auth_tokens (
   id TEXT PRIMARY KEY,
   user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   token_hash TEXT NOT NULL UNIQUE,
-  type TEXT NOT NULL CHECK (type IN ('verify_email', 'reset_password')),
+  type TEXT NOT NULL CHECK (type IN ('verify_email', 'login', 'reset_password')),
   email TEXT NOT NULL,
   expires_at TIMESTAMPTZ NOT NULL,
   consumed_at TIMESTAMPTZ,
+  attempts INTEGER NOT NULL DEFAULT 0,
   created_at TIMESTAMPTZ NOT NULL
 );
+ALTER TABLE auth_tokens ADD COLUMN IF NOT EXISTS attempts INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE auth_tokens DROP CONSTRAINT IF EXISTS auth_tokens_type_check;
+ALTER TABLE auth_tokens ADD CONSTRAINT auth_tokens_type_check
+  CHECK (type IN ('verify_email', 'login', 'reset_password'));
 CREATE INDEX IF NOT EXISTS auth_tokens_user_idx
   ON auth_tokens(user_id, type, created_at DESC);
+CREATE INDEX IF NOT EXISTS auth_tokens_lookup_idx
+  ON auth_tokens(email, type, consumed_at, created_at DESC);
 
 CREATE TABLE IF NOT EXISTS refresh_tokens (
   id TEXT PRIMARY KEY,

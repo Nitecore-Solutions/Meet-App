@@ -40,7 +40,7 @@ export type UserRow = {
   updated_at: string;
 };
 
-export type AuthTokenKind = "verify_email" | "reset_password";
+export type AuthTokenKind = "verify_email" | "login" | "reset_password";
 
 export type AuthTokenRow = {
   id: string;
@@ -50,6 +50,7 @@ export type AuthTokenRow = {
   email: string;
   expires_at: string;
   consumed_at: string | null;
+  attempts: number;
   created_at: string;
 };
 

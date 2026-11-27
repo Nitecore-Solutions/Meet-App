@@ -142,10 +142,11 @@ starts the API with PM2.
 
 The UI is structured so these APIs can replace the mock layer without rewriting
 screens: `src/data/*` holds seed content, contexts own persisted state, and
-screens call context actions. Integration is the remaining step — replace the
-context implementations with API calls (keeping their action signatures), swap
-simulated auth/payments for `/api/auth/*` and `/api/billing/*`, and connect chat
-to `/api/chats` plus the WebSocket events.
+screens call context actions. Set `EXPO_PUBLIC_API_BASE_URL` in `mobile/.env`
+to switch the login/signup/OTP screens from preview mode to the real API; the
+AuthContext then calls `/api/auth/*` and stores tokens. The remaining step is
+to connect chat, media and billing screens to `/api/chats`, `/api/media` and
+`/api/billing`.
 
 ## Notes
 

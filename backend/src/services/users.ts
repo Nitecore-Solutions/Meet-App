@@ -88,6 +88,11 @@ type CreateUserInput = {
   passwordHash: string;
   name?: string;
   emailVerified?: boolean;
+  age?: number;
+  gender?: string;
+  city?: string;
+  state?: string;
+  interestedIn?: string;
 };
 
 function parseArray(value: unknown): string[] {
@@ -158,9 +163,9 @@ export async function createUserRecord(
   const createdAt = nowIso();
   const result = await client.query<UserRow>(
     `INSERT INTO users
-      (id, email, password_hash, email_verified, name,
-       is_online, last_active_at, created_at, updated_at)
-     VALUES ($1, $2, $3, $4, $5, FALSE, NULL, $6, $6)
+      (id, email, password_hash, email_verified, name, age, gender, city, state,
+       interested_in, is_online, last_active_at, created_at, updated_at)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,FALSE,NULL,$11,$11)
      RETURNING *`,
     [
       randomId(),
@@ -168,6 +173,11 @@ export async function createUserRecord(
       input.passwordHash,
       Boolean(input.emailVerified),
       sanitizeName(input.name),
+      input.age ?? null,
+      input.gender ?? null,
+      input.city ?? null,
+      input.state ?? null,
+      input.interestedIn ?? null,
       createdAt,
     ]
   );
@@ -179,9 +189,9 @@ export async function createUserRecord(
 export async function createUser(input: CreateUserInput) {
   return queryOne<UserRow>(
     `INSERT INTO users
-      (id, email, password_hash, email_verified, name,
-       is_online, last_active_at, created_at, updated_at)
-     VALUES ($1, $2, $3, $4, $5, FALSE, NULL, $6, $6)
+      (id, email, password_hash, email_verified, name, age, gender, city, state,
+       interested_in, is_online, last_active_at, created_at, updated_at)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,FALSE,NULL,$11,$11)
      RETURNING *`,
     [
       randomId(),
@@ -189,6 +199,11 @@ export async function createUser(input: CreateUserInput) {
       input.passwordHash,
       Boolean(input.emailVerified),
       sanitizeName(input.name),
+      input.age ?? null,
+      input.gender ?? null,
+      input.city ?? null,
+      input.state ?? null,
+      input.interestedIn ?? null,
       nowIso(),
     ]
   ).then((row) => {

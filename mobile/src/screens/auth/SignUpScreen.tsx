@@ -54,8 +54,10 @@ function cityOptions() {
 }
 
 export function SignUpScreen({ navigation }: Props) {
-  const { signUp } = useAuth();
+  const { registerWithOtp } = useAuth();
   const [step, setStep] = useState(0);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [day, setDay] = useState("");
   const [month, setMonth] = useState("");
@@ -82,8 +84,12 @@ export function SignUpScreen({ navigation }: Props) {
 
   function next() {
     if (step === 0) {
-      if (name.trim().length < 2) {
-        setError("Tell us your first name so people know who they're talking to.");
+      if (!email.trim().includes("@")) {
+        setError("Enter a valid email address.");
+        return;
+      }
+      if (password.length < 8) {
+        setError("Use a password with at least 8 characters.");
         return;
       }
       setError(null);
@@ -91,8 +97,8 @@ export function SignUpScreen({ navigation }: Props) {
       return;
     }
     if (step === 1) {
-      if (!isValidAge(day, month, year)) {
-        setError("Enter a valid birth date. PagalPagal is only for adults 18+.");
+      if (name.trim().length < 2) {
+        setError("Tell us your first name so people know who they're talking to.");
         return;
       }
       setError(null);
@@ -100,12 +106,23 @@ export function SignUpScreen({ navigation }: Props) {
       return;
     }
     if (step === 2) {
+      if (!isValidAge(day, month, year)) {
+        setError("Enter a valid birth date. PagalPagal is only for adults 18+.");
+        return;
+      }
       setError(null);
       setStep(3);
       return;
     }
+    if (step === 3) {
+      setError(null);
+      setStep(4);
+      return;
+    }
     setSaving(true);
-    void signUp({
+    void registerWithOtp({
+      email: email.trim().toLowerCase(),
+      password,
       name: name.trim(),
       day,
       month,
@@ -114,7 +131,18 @@ export function SignUpScreen({ navigation }: Props) {
       interestedIn,
       city,
       cityState,
-    }).finally(() => setSaving(false));
+    })
+      .then((result) => {
+        navigation.navigate("Otp", {
+          email: email.trim().toLowerCase(),
+          mode: "signup",
+          ...(result.devCode ? { devCode: result.devCode } : {}),
+        });
+      })
+      .catch((caught: unknown) => {
+        setError(caught instanceof Error ? caught.message : "Could not start signup. Try again.");
+      })
+      .finally(() => setSaving(false));
   }
 
   return (
@@ -130,10 +158,10 @@ export function SignUpScreen({ navigation }: Props) {
         >
           <View style={styles.headerRow}>
             <BackButton onPress={goBack} />
-            <Text style={styles.stepLabel}>STEP {step + 1} OF 4</Text>
+            <Text style={styles.stepLabel}>STEP {step + 1} OF 5</Text>
           </View>
           <View style={styles.progress}>
-            {Array.from({ length: 4 }).map((_, index) => (
+            {Array.from({ length: 5 }).map((_, index) => (
               <View
                 key={index}
                 style={[
@@ -145,6 +173,43 @@ export function SignUpScreen({ navigation }: Props) {
           </View>
 
           {step === 0 ? (
+            <View>
+              <Text style={styles.title}>Create your account</Text>
+              <Text style={styles.subtitle}>
+                We'll email you a code to verify it — no phone number needed.
+              </Text>
+              <Text style={styles.question}>Your email</Text>
+              <TextField
+                value={email}
+                onChangeText={(value) => {
+                  setEmail(value);
+                  if (error) setError(null);
+                }}
+                placeholder="you@example.com"
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoCorrect={false}
+                autoFocus
+                returnKeyType="next"
+              />
+              <Text style={[styles.question, styles.questionSpaced]}>Password</Text>
+              <TextField
+                value={password}
+                onChangeText={(value) => {
+                  setPassword(value);
+                  if (error) setError(null);
+                }}
+                placeholder="At least 8 characters"
+                secureTextEntry
+                autoCapitalize="none"
+                returnKeyType="next"
+                onSubmitEditing={next}
+              />
+              {error ? <ErrorBanner message={error} /> : null}
+            </View>
+          ) : null}
+
+          {step === 1 ? (
             <View>
               <Text style={styles.title}>Complete your profile!</Text>
               <Text style={styles.subtitle}>
@@ -171,7 +236,7 @@ export function SignUpScreen({ navigation }: Props) {
             </View>
           ) : null}
 
-          {step === 1 ? (
+          {step === 2 ? (
             <View>
               <Text style={styles.title}>When were you born?</Text>
               <Text style={styles.subtitle}>
@@ -227,7 +292,7 @@ export function SignUpScreen({ navigation }: Props) {
             </View>
           ) : null}
 
-          {step === 2 ? (
+          {step === 3 ? (
             <View>
               <Text style={styles.title}>Tell us about you</Text>
               <Text style={styles.subtitle}>
@@ -263,7 +328,7 @@ export function SignUpScreen({ navigation }: Props) {
             </View>
           ) : null}
 
-          {step === 3 ? (
+          {step === 4 ? (
             <View>
               <Text style={styles.title}>Where do you live?</Text>
               <Text style={styles.subtitle}>
@@ -301,7 +366,7 @@ export function SignUpScreen({ navigation }: Props) {
           ) : null}
 
           <PrimaryButton
-            label={step === 3 ? "START MATCHING" : "NEXT"}
+            label={step === 4 ? "SEND VERIFICATION CODE" : "NEXT"}
             variant="dark"
             onPress={next}
             loading={saving}

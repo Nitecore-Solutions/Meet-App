@@ -22,20 +22,35 @@ import type { AuthStackParamList } from "../../navigation/types";
 type Props = NativeStackScreenProps<AuthStackParamList, "Login">;
 
 export function LoginScreen({ navigation }: Props) {
-  const { signIn } = useAuth();
+  const { requestLoginOtp } = useAuth();
   const { showToast } = useToast();
-  const [contact, setContact] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
 
-  function login() {
-    if (!contact.trim() && !password) {
-      setError("Add your email or phone number and password to continue.");
+  async function login() {
+    const value = email.trim();
+    if (!value.includes("@") || !password) {
+      setError("Enter your email and password to continue.");
       return;
     }
     setError(null);
-    void signIn(contact.trim());
+    setBusy(true);
+    try {
+      const result = await requestLoginOtp(value, password);
+      showToast("We emailed you a 6-digit sign-in code.", "success");
+      navigation.navigate("Otp", {
+        email: value,
+        mode: "login",
+        ...(result.devCode ? { devCode: result.devCode } : {}),
+      });
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Could not send the code. Try again.");
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
@@ -58,10 +73,10 @@ export function LoginScreen({ navigation }: Props) {
           <View style={styles.form}>
             <TextField
               filled
-              placeholder="Email or phone number"
-              value={contact}
+              placeholder="Email address"
+              value={email}
               onChangeText={(value) => {
-                setContact(value);
+                setEmail(value);
                 if (error) setError(null);
               }}
               keyboardType="email-address"
@@ -84,9 +99,7 @@ export function LoginScreen({ navigation }: Props) {
               rightAccessory={
                 <Pressable
                   accessibilityRole="button"
-                  accessibilityLabel={
-                    showPassword ? "Hide password" : "Show password"
-                  }
+                  accessibilityLabel={showPassword ? "Hide password" : "Show password"}
                   onPress={() => setShowPassword((current) => !current)}
                   hitSlop={10}
                 >
@@ -99,16 +112,15 @@ export function LoginScreen({ navigation }: Props) {
               }
             />
             {error ? <ErrorBanner message={error} /> : null}
+
+            <PrimaryButton label="CONTINUE" onPress={login} loading={busy} />
+
             <Pressable
-              onPress={() =>
-                showToast("A reset link would be sent by the backend.", "info")
-              }
+              onPress={() => navigation.navigate("ForgotPassword")}
               style={styles.forgot}
             >
-              <Text style={styles.forgotText}>Forgot your password?</Text>
+              <Text style={styles.forgotText}>Forgot password?</Text>
             </Pressable>
-
-            <PrimaryButton label="LOGIN" onPress={login} />
 
             <View style={styles.orRow}>
               <View style={styles.orLine} />
@@ -117,39 +129,19 @@ export function LoginScreen({ navigation }: Props) {
             </View>
 
             <PrimaryButton
-              label="LOGIN WITH FACEBOOK"
+              label="CONTINUE WITH GOOGLE"
               variant="secondary"
-              onPress={() => {
-                showToast("Facebook login is a preview shortcut.", "info");
-                void signIn("facebook-preview");
-              }}
-              icon={
-                <View style={styles.facebookTile}>
-                  <Text style={styles.facebookLetter}>f</Text>
-                </View>
-              }
-            />
-          </View>
-
-          <View style={styles.otpBlock}>
-            <Text style={styles.otpHint}>Didn't remember password?</Text>
-            <PrimaryButton
-              label="LOGIN WITH OTP"
-              variant="outline"
               onPress={() =>
-                navigation.navigate("Otp", {
-                  contact: contact.trim() || "your phone number",
-                })
+                showToast(
+                  "Google sign-in will be available once OAuth is configured.",
+                  "info"
+                )
               }
-              style={styles.otpButton}
+              icon={<Text style={styles.googleLetter}>G</Text>}
             />
           </View>
 
           <View style={styles.spacer} />
-          <Text style={styles.previewNote}>
-            UI preview · any email and password will work. No real account is
-            created.
-          </Text>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -190,8 +182,8 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   forgot: {
-    alignSelf: "flex-end",
-    paddingVertical: 2,
+    alignSelf: "center",
+    paddingVertical: 4,
   },
   forgotText: {
     fontSize: 12.5,
@@ -216,45 +208,20 @@ const styles = StyleSheet.create({
     color: colors.muted,
     fontWeight: "600",
   },
-  facebookTile: {
-    width: 23,
-    height: 23,
-    borderRadius: 4,
-    backgroundColor: colors.white,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  facebookLetter: {
-    color: "#2563EB",
+  googleLetter: {
+    color: "#4285F4",
     fontWeight: "900",
     fontSize: 17,
-    lineHeight: 20,
-    marginTop: -2,
-  },
-  otpBlock: {
-    marginTop: spacing.xxl,
-    gap: spacing.md,
-  },
-  otpHint: {
-    fontSize: 12.5,
-    color: colors.muted,
-    textAlign: "center",
-    fontWeight: "500",
-  },
-  otpButton: {
-    borderRadius: radii.sm,
-    borderColor: colors.ink,
-    backgroundColor: colors.surface,
   },
   spacer: {
     flex: 1,
     minHeight: spacing.xxl,
   },
-  previewNote: {
-    fontSize: 10.5,
-    lineHeight: 15,
-    color: colors.faint,
-    textAlign: "center",
-    marginTop: spacing.lg,
+  googleTile: {
+    width: 23,
+    height: 23,
+    borderRadius: radii.sm,
+    alignItems: "center",
+    justifyContent: "center",
   },
 });

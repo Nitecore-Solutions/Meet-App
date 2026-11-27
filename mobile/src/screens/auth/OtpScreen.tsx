@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import {
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -10,6 +11,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 
 import { BackButton, PrimaryButton } from "../../components/Buttons";
+import { ErrorBanner } from "../../components/Form";
 import { colors, radii, spacing } from "../../constants/theme";
 import { useAuth } from "../../context/AuthContext";
 import type { AuthStackParamList } from "../../navigation/types";
@@ -17,10 +19,12 @@ import type { AuthStackParamList } from "../../navigation/types";
 type Props = NativeStackScreenProps<AuthStackParamList, "Otp">;
 
 export function OtpScreen({ navigation, route }: Props) {
-  const { signIn } = useAuth();
-  const [code, setCode] = useState("");
+  const { email, mode, devCode } = route.params;
+  const { verifySignupOtp, verifyLoginOtp, resendOtp, apiEnabled } = useAuth();
+  const [code, setCode] = useState(devCode ?? "");
   const [error, setError] = useState<string | null>(null);
-  const [seconds, setSeconds] = useState(32);
+  const [busy, setBusy] = useState(false);
+  const [seconds, setSeconds] = useState(60);
   const inputRef = useRef<TextInput>(null);
 
   useEffect(() => {
@@ -29,25 +33,64 @@ export function OtpScreen({ navigation, route }: Props) {
     return () => clearTimeout(timer);
   }, [seconds]);
 
-  function verify() {
+  async function verify() {
     if (code.length !== 6) {
       setError("Enter all 6 digits to continue.");
       return;
     }
     setError(null);
-    void signIn(route.params.contact);
+    setBusy(true);
+    try {
+      if (mode === "signup") await verifySignupOtp(email, code);
+      else await verifyLoginOtp(email, code);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "That code could not be verified.");
+      setBusy(false);
+    }
+  }
+
+  async function resend() {
+    if (seconds > 0 || busy) return;
+    setBusy(true);
+    try {
+      const result = await resendOtp(
+        email,
+        mode === "signup" ? "verify_email" : "login"
+      );
+      if (result.devCode) setCode(result.devCode);
+      setSeconds(60);
+      setError(null);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Could not resend the code.");
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
     <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
-      <View style={styles.content}>
+      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <BackButton onPress={() => navigation.goBack()} />
-        <Text style={styles.title}>Verify your number</Text>
+        <Text style={styles.title}>
+          {mode === "signup" ? "Verify your email" : "Verify it's you"}
+        </Text>
         <Text style={styles.subtitle}>
           We sent a 6-digit code to{" "}
-          <Text style={styles.contact}>{route.params.contact}</Text>. Enter it
-          below to continue.
+          <Text style={styles.contact}>{email}</Text>. Enter it below to continue.
         </Text>
+
+        {!apiEnabled ? (
+          <View style={styles.previewCard}>
+            <Text style={styles.previewLabel}>UI PREVIEW</Text>
+            <Text style={styles.previewText}>
+              No backend URL is configured. Use 123456 as the demo code.
+            </Text>
+          </View>
+        ) : null}
+
+        {devCode && apiEnabled ? (
+          <Text style={styles.devHint}>Dev code: {devCode}</Text>
+        ) : null}
 
         <Pressable
           onPress={() => inputRef.current?.focus()}
@@ -85,24 +128,19 @@ export function OtpScreen({ navigation, route }: Props) {
           />
         </Pressable>
 
-        {error ? <Text style={styles.error}>{error}</Text> : null}
+        {error ? <ErrorBanner message={error} /> : null}
 
         <PrimaryButton
           label="VERIFY & CONTINUE"
           onPress={verify}
-          disabled={code.length < 6}
+          disabled={code.length < 6 || busy}
+          loading={busy}
           style={styles.verify}
         />
 
         <View style={styles.resendRow}>
           <Text style={styles.resendText}>Didn't get the code?</Text>
-          <Pressable
-            disabled={seconds > 0}
-            onPress={() => {
-              setSeconds(30);
-              setError(null);
-            }}
-          >
+          <Pressable disabled={seconds > 0 || busy} onPress={resend}>
             <Text
               style={[
                 styles.resendLink,
@@ -113,15 +151,7 @@ export function OtpScreen({ navigation, route }: Props) {
             </Text>
           </Pressable>
         </View>
-
-        <View style={styles.spacer} />
-        <View style={styles.previewCard}>
-          <Text style={styles.previewLabel}>UI PREVIEW</Text>
-          <Text style={styles.previewText}>
-            No SMS is sent in this build. Enter any 6 digits to log in.
-          </Text>
-        </View>
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -132,7 +162,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
   },
   content: {
-    flex: 1,
+    flexGrow: 1,
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.md,
     paddingBottom: spacing.lg,
@@ -156,6 +186,31 @@ const styles = StyleSheet.create({
   contact: {
     color: colors.ink,
     fontWeight: "700",
+  },
+  previewCard: {
+    backgroundColor: colors.secondarySoft,
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    marginTop: spacing.lg,
+  },
+  previewLabel: {
+    fontSize: 9.5,
+    fontWeight: "800",
+    letterSpacing: 0.8,
+    color: colors.secondaryDark,
+  },
+  previewText: {
+    fontSize: 12,
+    lineHeight: 17,
+    color: colors.secondaryDark,
+    marginTop: 2,
+  },
+  devHint: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: colors.successDark,
+    marginTop: spacing.md,
   },
   codeRow: {
     flexDirection: "row",
@@ -194,12 +249,6 @@ const styles = StyleSheet.create({
     outlineWidth: 0,
     outlineStyle: "solid",
   },
-  error: {
-    fontSize: 12,
-    color: colors.danger,
-    fontWeight: "600",
-    marginTop: spacing.md,
-  },
   verify: {
     marginTop: spacing.xl,
   },
@@ -221,26 +270,5 @@ const styles = StyleSheet.create({
   },
   resendLinkDisabled: {
     color: colors.faint,
-  },
-  spacer: {
-    flex: 1,
-  },
-  previewCard: {
-    backgroundColor: colors.secondarySoft,
-    borderRadius: radii.md,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-  },
-  previewLabel: {
-    fontSize: 9.5,
-    fontWeight: "800",
-    letterSpacing: 0.8,
-    color: colors.secondaryDark,
-  },
-  previewText: {
-    fontSize: 12,
-    lineHeight: 17,
-    color: colors.secondaryDark,
-    marginTop: 2,
   },
 });

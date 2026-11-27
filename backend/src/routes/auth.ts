@@ -7,13 +7,14 @@ import {
   login,
   register,
   resetPassword,
-  resendVerification,
+  resendOtp,
   verifyEmail,
+  verifyLoginOtp,
 } from "../services/email-auth";
 import { revokeRefreshToken, rotateRefreshToken } from "../services/tokens";
 import { findUserById, serializeOwnProfile } from "../services/users";
 import { unauthorized } from "../utils/errors";
-import { parseBody, parseQuery } from "../utils/validate";
+import { parseBody } from "../utils/validate";
 
 export const authRouter = Router();
 
@@ -35,21 +36,32 @@ const credentialLimiter = rateLimit({
 
 const emailField = z.string().trim().email("Enter a valid email address.").max(254);
 const passwordField = z.string().min(8, "Password must be at least 8 characters.").max(128);
-const tokenField = z.string().trim().min(20).max(200);
+const codeField = z.string().trim().regex(/^\d{6}$/, "Enter the 6-digit code.");
 
 const registerSchema = z.object({
   email: emailField,
   password: passwordField,
   name: z.string().trim().min(1).max(80).optional(),
+  age: z.number().int().min(18).max(120).optional(),
+  gender: z.enum(["woman", "man", "other"]).optional(),
+  city: z.string().trim().max(100).optional(),
+  state: z.string().trim().max(100).optional(),
+  interestedIn: z.enum(["women", "men", "everyone"]).optional(),
 });
 const loginSchema = z.object({
   email: emailField,
   password: z.string().min(1).max(128),
 });
 const emailOnlySchema = z.object({ email: emailField });
-const verifyBodySchema = z.object({ token: tokenField });
-const verifyQuerySchema = z.object({ token: tokenField });
-const resetSchema = z.object({ token: tokenField, password: passwordField });
+const verifySchema = z.object({ email: emailField, code: codeField });
+const resendSchema = z.object({
+  email: emailField,
+  purpose: z.enum(["verify_email", "login"]),
+});
+const resetSchema = z.object({
+  token: z.string().trim().min(20).max(200),
+  password: passwordField,
+});
 const refreshSchema = z.object({
   refreshToken: z.string().trim().min(20).max(500),
 });
@@ -57,29 +69,26 @@ const refreshSchema = z.object({
 authRouter.use(authLimiter);
 
 authRouter.post("/register", credentialLimiter, async (req, res) => {
-  const input = parseBody(registerSchema, req.body);
-  res.status(201).json(await register(input));
+  res.status(201).json(await register(parseBody(registerSchema, req.body)));
 });
 
 authRouter.post("/verify-email", credentialLimiter, async (req, res) => {
-  const { token } = parseBody(verifyBodySchema, req.body);
-  res.json(await verifyEmail(token));
+  const { email, code } = parseBody(verifySchema, req.body);
+  res.json(await verifyEmail(email, code));
 });
 
-// Direct browser links from the verification email can hit this endpoint too.
-authRouter.get("/verify-email", credentialLimiter, async (req, res) => {
-  const { token } = parseQuery(verifyQuerySchema, req.query);
-  res.json(await verifyEmail(token));
+authRouter.post("/verify-login-otp", credentialLimiter, async (req, res) => {
+  const { email, code } = parseBody(verifySchema, req.body);
+  res.json(await verifyLoginOtp(email, code));
 });
 
-authRouter.post("/resend-verification", credentialLimiter, async (req, res) => {
-  const { email } = parseBody(emailOnlySchema, req.body);
-  res.json(await resendVerification(email));
+authRouter.post("/resend-otp", credentialLimiter, async (req, res) => {
+  const { email, purpose } = parseBody(resendSchema, req.body);
+  res.json(await resendOtp(email, purpose));
 });
 
 authRouter.post("/login", credentialLimiter, async (req, res) => {
-  const input = parseBody(loginSchema, req.body);
-  res.json(await login(input));
+  res.json(await login(parseBody(loginSchema, req.body)));
 });
 
 authRouter.post("/forgot-password", credentialLimiter, async (req, res) => {
@@ -107,6 +116,5 @@ authRouter.post("/logout", requireAuth, async (req, res) => {
 });
 
 authRouter.get("/session", requireAuth, async (req, res) => {
-  const user = authUser(req);
-  res.json({ user: await serializeOwnProfile(user) });
+  res.json({ user: await serializeOwnProfile(authUser(req)) });
 });

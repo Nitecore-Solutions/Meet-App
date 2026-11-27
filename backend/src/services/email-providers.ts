@@ -1,64 +1,96 @@
 import { config } from "../config";
+import type { AuthTokenKind } from "../domain/types";
 import { AppError } from "../utils/errors";
 import { escapeHtml } from "../utils/email";
 import { logger } from "../utils/logger";
 
-export type EmailKind = "verify_email" | "reset_password";
-
 export type EmailDelivery = {
-  kind: EmailKind;
+  kind: AuthTokenKind;
   to: string;
   name: string;
-  link: string;
-  token: string;
+  code?: string;
+  link?: string;
 };
 
 export interface EmailProvider {
   readonly name: string;
-  readonly exposesLink: boolean;
+  readonly exposesSecrets: boolean;
   send(delivery: EmailDelivery): Promise<void>;
 }
 
-const SUBJECTS: Record<EmailKind, string> = {
-  verify_email: "Verify your PagalPagal email",
-  reset_password: "Reset your PagalPagal password",
+const SUBJECTS: Record<AuthTokenKind, string> = {
+  verify_email: "Verify your account",
+  login: "Your sign-in code",
+  reset_password: "Reset your password",
 };
 
 function htmlFor(delivery: EmailDelivery) {
-  const action = delivery.kind === "verify_email" ? "verify your email" : "reset your password";
-  const title = delivery.kind === "verify_email" ? "Verify your email" : "Reset your password";
   const safeName = escapeHtml(delivery.name);
-  const safeLink = escapeHtml(delivery.link);
+  if (delivery.kind === "reset_password") {
+    const safeLink = escapeHtml(delivery.link ?? "");
+    return `<div style="font-family:Arial,sans-serif;line-height:1.6;color:#1a1a1a">
+      <h2>Reset your password</h2>
+      <p>Hi ${safeName}, we received a request to reset your password.</p>
+      <p><a href="${safeLink}" style="background:#0e7a4e;color:#fff;padding:12px 20px;text-decoration:none;border-radius:8px;font-weight:bold">Reset Password</a></p>
+      <p>This link expires in 30 minutes. If you didn't request it, ignore this email.</p>
+      <p>Button not working? Copy this link: ${safeLink}</p>
+    </div>`;
+  }
+  const safeCode = escapeHtml(delivery.code ?? "");
   return `<div style="font-family:Arial,sans-serif;line-height:1.6;color:#1a1a1a">
-    <h2>${title}</h2>
-    <p>Hi ${safeName},</p>
-    <p>Use the button below to ${action} for your PagalPagal account.</p>
-    <p><a href="${safeLink}" style="background:#f5c518;color:#111;padding:12px 20px;text-decoration:none;border-radius:6px;display:inline-block;font-weight:bold">${title}</a></p>
-    <p>If the button does not work, copy this link into your browser:<br>${safeLink}</p>
-    <p>This link expires soon. If you did not request this, you can ignore this email.</p>
-    <p>— The PagalPagal team</p>
+    <h2>Verify your account</h2>
+    <p>Hi ${safeName}, use this code to continue:</p>
+    <div style="background:#f0fdf4;border:2px dashed #0e7a4e;border-radius:10px;padding:18px 40px;font-size:34px;font-weight:bold;letter-spacing:10px;color:#0e7a4e">${safeCode}</div>
+    <p>This code expires in 10 minutes. If you didn't request it, you can ignore this email.</p>
   </div>`;
 }
 
 class ConsoleEmailProvider implements EmailProvider {
   readonly name = "console";
-  readonly exposesLink = true;
+  readonly exposesSecrets = true;
 
   async send(delivery: EmailDelivery) {
     logger.warn("Email delivery is using the console provider", {
       to: delivery.to,
       kind: delivery.kind,
-      link: delivery.link,
-      token: delivery.token,
+      code: delivery.code ?? null,
+      link: delivery.link ?? null,
+      note: "In development these values are also returned as devCode/devLink in the API response.",
     });
   }
 }
 
 class BrevoEmailProvider implements EmailProvider {
   readonly name = "brevo";
-  readonly exposesLink = false;
+  readonly exposesSecrets = false;
 
   async send(delivery: EmailDelivery) {
+    const templateId =
+      delivery.kind === "reset_password"
+        ? config.email.brevo.resetTemplateId
+        : config.email.brevo.verifyTemplateId;
+
+    const body: Record<string, unknown> = {
+      sender: {
+        name: config.email.brevo.fromName,
+        email: config.email.brevo.fromEmail,
+      },
+      to: [{ email: delivery.to, name: delivery.name }],
+      ...(templateId
+        ? {
+            templateId: Number(templateId),
+            params: {
+              name: delivery.name,
+              OTP: delivery.code ?? "",
+              reset_link: delivery.link ?? "",
+            },
+          }
+        : {
+            subject: SUBJECTS[delivery.kind],
+            htmlContent: htmlFor(delivery),
+          }),
+    };
+
     const response = await fetch("https://api.brevo.com/v3/smtp/email", {
       method: "POST",
       headers: {
@@ -66,19 +98,15 @@ class BrevoEmailProvider implements EmailProvider {
         "Content-Type": "application/json",
         Accept: "application/json",
       },
-      body: JSON.stringify({
-        sender: {
-          name: config.email.brevo.fromName,
-          email: config.email.brevo.fromEmail,
-        },
-        to: [{ email: delivery.to, name: delivery.name }],
-        subject: SUBJECTS[delivery.kind],
-        htmlContent: htmlFor(delivery),
-      }),
+      body: JSON.stringify(body),
     });
     if (!response.ok) {
       const details = await response.text().catch(() => "");
-      logger.error("Brevo email delivery failed", { status: response.status, details });
+      logger.error("Brevo email delivery failed", {
+        status: response.status,
+        details,
+        templateId: templateId || "inline",
+      });
       throw new AppError(502, "EMAIL_DELIVERY_FAILED", "We could not send the email. Please try again.");
     }
   }
@@ -94,5 +122,5 @@ export function getEmailProvider(): EmailProvider {
 }
 
 export function exposeDevEmail() {
-  return config.email.devMode || getEmailProvider().exposesLink;
+  return config.email.devMode || getEmailProvider().exposesSecrets;
 }

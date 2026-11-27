@@ -73,27 +73,33 @@ Database pool size is `DATABASE_POOL_MAX` (default 10). The schema covers
 
 ## Authentication flow (email/password + Brevo)
 
-1. **Register** — `POST /api/auth/register` with `{ email, password, name? }`.
-   Creates an unverified account, hashes the password with scrypt
-   (`scrypt$<salt>$<hash>`), and emails a single-use verification link through
-   Brevo. Password must be 8–128 characters.
-2. **Verify email** — the link points to `${APP_URL}/verify-email?token=...`;
-   the app calls `POST /api/auth/verify-email` with the token. Verification
-   marks `email_verified = true` and returns access + refresh tokens.
-3. **Sign in** — `POST /api/auth/login` with `{ email, password }`. Unverified
-   accounts are rejected with `EMAIL_NOT_VERIFIED` and can request a new link.
-4. **Resend verification** — `POST /api/auth/resend-verification`.
+1. **Register** — `POST /api/auth/register` with `{ email, password }` and any
+   profile details (name, age, gender, city, state, interestedIn). Creates an
+   unverified account with an scrypt-hashed password and emails a **6-digit OTP**
+   (default 10-minute expiry). Password must be 8–128 characters.
+2. **Verify signup** — `POST /api/auth/verify-email` with `{ email, code }`.
+   Marks `email_verified = true` and returns access + refresh tokens.
+3. **Sign in** — two steps every time: `POST /api/auth/login` with
+   `{ email, password }` validates the credentials and emails a login OTP,
+   returning `{ otpRequired: true, email }`. Then
+   `POST /api/auth/verify-login-otp` with `{ email, code }` returns the tokens —
+   the user never re-enters profile details.
+4. **Resend** — `POST /api/auth/resend-otp` with `{ email, purpose }` where
+   purpose is `verify_email` or `login`.
 5. **Forgot password** — `POST /api/auth/forgot-password` always returns
    `{ ok: true }` so accounts cannot be enumerated.
-6. **Reset password** — `POST /api/auth/reset-password` with the emailed token
-   and a new password. The token is one-time, expires (default 60 minutes), and
-   **all existing refresh sessions are revoked**.
+6. **Reset password** — the email contains a reset link built from `APP_URL`;
+   `POST /api/auth/reset-password` with `{ token, password }` completes it. The
+   token is one-time, expires in 30 minutes by default, and **all existing
+   refresh sessions are revoked**.
 7. **Session** — access tokens are JWTs (1h); refresh tokens are SHA-256 hashed
    in the DB, rotate on use, and can be revoked on logout.
 
-Tokens are random 32-byte values stored only as SHA-256 hashes in `auth_tokens`.
-Issue limits (`EMAIL_MAX_TOKENS_PER_HOUR`) and a resend cooldown
-(`EMAIL_RESEND_SECONDS`) apply. `GET /health` reports `emailProvider`.
+OTP codes are HMAC-hashed at rest in `auth_tokens`, allow
+`EMAIL_MAX_OTP_ATTEMPTS` tries, and are rate limited by
+`EMAIL_MAX_TOKENS_PER_HOUR` plus `EMAIL_RESEND_SECONDS`. Reset tokens are random
+32-byte values stored only as SHA-256 hashes. `GET /health` reports
+`emailProvider`.
 
 ### Brevo
 
@@ -103,12 +109,16 @@ EMAIL_DEV_MODE=false
 BREVO_API_KEY=your-key
 BREVO_FROM_EMAIL=noreply@yourdomain.com
 BREVO_FROM_NAME=PagalPagal
+BREVO_TEMPLATE_VERIFY_ID=12345
+BREVO_TEMPLATE_RESET_ID=67890
 ```
 
-The provider calls Brevo's `POST /v3/smtp/email`. The verification/reset links
-are built from `APP_URL`. If delivery fails, the issued token is deleted and the
-request fails. To add another provider, implement `EmailProvider` in
-`src/services/email-providers.ts` and extend `getEmailProvider()`.
+The provider calls Brevo's `POST /v3/smtp/email`. When template IDs are set it
+sends `templateId` with `params: { name, OTP, reset_link }` — matching the
+"Verify your account" and "Reset your password" templates. Without template IDs
+it falls back to inline HTML. Reset links are built from `APP_URL`. If delivery
+fails, the issued token is deleted and the request fails. To add another
+provider, implement `EmailProvider` in `src/services/email-providers.ts`.
 
 ## HTTP API
 
@@ -120,10 +130,11 @@ All endpoints are under `/api`, return JSON, and authenticated routes expect
 
 | Method | Path | Purpose |
 | --- | --- | --- |
-| POST | `/register` | `{ email, password, name? }` → unverified user + `verificationRequired` |
-| POST / GET | `/verify-email` | `{ token }` / `?token=` → user + tokens |
-| POST | `/resend-verification` | `{ email }` |
-| POST | `/login` | `{ email, password }` → user + tokens |
+| POST | `/register` | `{ email, password, name?, age?, gender?, city?, state?, interestedIn? }` → `verificationRequired` + OTP |
+| POST | `/verify-email` | `{ email, code }` → user + tokens |
+| POST | `/login` | `{ email, password }` → `{ otpRequired: true }` + OTP |
+| POST | `/verify-login-otp` | `{ email, code }` → user + tokens |
+| POST | `/resend-otp` | `{ email, purpose: "verify_email" \\| "login" }` |
 | POST | `/forgot-password` | `{ email }` → `{ ok: true }` |
 | POST | `/reset-password` | `{ token, password }` → `{ ok: true }` |
 | POST | `/refresh` | `{ refreshToken }` → rotated tokens |
