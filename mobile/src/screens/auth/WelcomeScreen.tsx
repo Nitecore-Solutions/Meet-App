@@ -15,7 +15,6 @@ import { BrandLockup } from "../../components/Brand";
 import { PrimaryButton } from "../../components/Buttons";
 import { APP_TAGLINE } from "../../constants/config";
 import { colors, radii, spacing } from "../../constants/theme";
-import { useAuth } from "../../context/AuthContext";
 import { useToast } from "../../context/ToastContext";
 import { profilePhotos } from "../../data/images";
 import type { AuthStackParamList } from "../../navigation/types";
@@ -23,19 +22,17 @@ import type { AuthStackParamList } from "../../navigation/types";
 type Props = NativeStackScreenProps<AuthStackParamList, "Welcome">;
 
 export function WelcomeScreen({ navigation }: Props) {
-  const { signIn } = useAuth();
   const { showToast } = useToast();
 
   function showTerms() {
     Alert.alert(
       "Terms & privacy",
-      "PagalPagal is strictly for adults aged 18 and over. Be kind, keep personal information safe, and report anything that feels wrong. This build is a UI preview with local demo data."
+      "PagalPagal is strictly for adults aged 18 and over. Be kind, keep personal information safe, and report anything that feels wrong."
     );
   }
 
   function handleSocial() {
-    showToast("Facebook sign-in is a preview shortcut.", "info");
-    void signIn("facebook-preview");
+    showToast("Google sign-in will be available once OAuth is configured.", "info");
   }
 
   return (
@@ -76,15 +73,11 @@ export function WelcomeScreen({ navigation }: Props) {
             iconRight={<ArrowRight size={18} color={colors.white} strokeWidth={2.4} />}
           />
           <PrimaryButton
-            label="SIGN UP WITH FACEBOOK"
+            label="SIGN UP WITH GOOGLE"
             pill
             variant="secondary"
             onPress={handleSocial}
-            icon={
-              <View style={styles.facebookTile}>
-                <Text style={styles.facebookLetter}>f</Text>
-              </View>
-            }
+            icon={<Text style={styles.googleLetter}>G</Text>}
           />
           <PrimaryButton
             label="LOGIN"
@@ -169,20 +162,11 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     marginTop: spacing.xl,
   },
-  facebookTile: {
-    width: 22,
-    height: 22,
-    borderRadius: 4,
-    backgroundColor: colors.white,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  facebookLetter: {
-    color: "#1877F2",
+  googleLetter: {
+    color: "#4285F4",
     fontWeight: "900",
-    fontSize: 17,
+    fontSize: 18,
     lineHeight: 20,
-    marginTop: -2,
   },
   terms: {
     fontSize: 10.5,

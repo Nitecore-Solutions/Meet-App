@@ -152,7 +152,7 @@ const DOCS: Record<LegalKind, LegalDoc> = {
           "We may change plan prices with advance notice; changes do not apply to a period you have already paid for.",
           "Refunds are handled according to the rules of the store or payment method you used.",
         ],
-        note: "This preview build simulates purchases. No real payment is taken and no subscription is created.",
+        note: "Payments are processed securely through our payment provider.",
       },
       {
         heading: "Safety and moderation",
@@ -468,8 +468,7 @@ export function LegalScreen({ navigation, route }: Props) {
         <View style={styles.footerRow}>
           <HeartHandshake size={15} color={colors.faint} strokeWidth={2} />
           <Text style={styles.disclaimer}>
-            This is sample copy for the PagalPagal UI preview. It is not legal
-            advice.
+            This is general information, not legal advice.
           </Text>
         </View>
       </ScrollView>

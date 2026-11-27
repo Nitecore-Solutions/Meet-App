@@ -12,16 +12,14 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
 import { Avatar, TrustBadge } from "../../components/Avatar";
 import { ScreenHeader } from "../../components/ScreenHeader";
-import { ONLINE_NOW } from "../../constants/config";
 import { colors, radii, spacing } from "../../constants/theme";
 import { useDating } from "../../context/DatingContext";
-import { profiles } from "../../data/profiles";
 import type { AppStackParamList } from "../../navigation/types";
 
 export function OnlineScreen() {
   const navigation =
     useNavigation<NativeStackNavigationProp<AppStackParamList>>();
-  const { ensureChat, blockedIds } = useDating();
+  const { ensureChat, blockedIds, profiles } = useDating();
 
   const onlineProfiles = useMemo(
     () =>
@@ -31,12 +29,12 @@ export function OnlineScreen() {
           profile.online &&
           !blockedIds.includes(profile.id)
       ),
-    [blockedIds]
+    [profiles, blockedIds]
   );
 
   return (
     <SafeAreaView style={styles.safe} edges={["top"]}>
-      <ScreenHeader title={`New and Online (${ONLINE_NOW.toLocaleString("en-IN")})`} large />
+      <ScreenHeader title={`New and Online (${onlineProfiles.length})`} large />
       <FlatList
         data={onlineProfiles}
         keyExtractor={(item) => item.id}

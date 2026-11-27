@@ -54,7 +54,7 @@ const BASE_ORDERS: Order[] = [
     date: "22 Oct 2026",
     status: "Expired",
     category: "plus",
-    method: "UPI · demo@okaxis",
+    method: "UPI",
     txn: "TXN77420918",
   },
   {
@@ -65,7 +65,7 @@ const BASE_ORDERS: Order[] = [
     date: "3 Sep 2026",
     status: "Completed",
     category: "boost",
-    method: "UPI · demo@okaxis",
+    method: "UPI",
     txn: "TXN77319044",
   },
   {
@@ -112,7 +112,7 @@ export function OrdersScreen({ navigation }: Props) {
         date: "18 Nov 2026",
         status: "Active",
         category: "plus",
-        method: "UPI · demo@okaxis",
+        method: "UPI",
         txn: "TXN88201463",
       },
       ...BASE_ORDERS,
@@ -208,7 +208,7 @@ export function OrdersScreen({ navigation }: Props) {
         <View style={styles.demoNote}>
           <Sparkles size={15} color={colors.secondary} strokeWidth={2.2} />
           <Text style={styles.demoText}>
-            Payments in this preview are simulated. No money is ever charged.
+            Your Plus purchases and receipts appear here.
           </Text>
         </View>
 

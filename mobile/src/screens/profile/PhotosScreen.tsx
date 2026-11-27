@@ -175,8 +175,8 @@ export function PhotosScreen({ navigation }: Props) {
         </Pressable>
 
         <Text style={styles.note}>
-          Photos are local demo assets in this UI preview. Camera and gallery
-          access can be connected when the backend is ready.
+          Add clear photos from your gallery so people can recognise you. Your
+          best photo appears first in discovery.
         </Text>
       </ScrollView>
 

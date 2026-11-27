@@ -35,7 +35,6 @@ import { colors, radii, shadow, spacing } from "../../constants/theme";
 import { useAuth } from "../../context/AuthContext";
 import { useDating } from "../../context/DatingContext";
 import { useToast } from "../../context/ToastContext";
-import { profileById } from "../../data/profiles";
 import type { AppStackParamList } from "../../navigation/types";
 import type { ReportReason } from "../../types";
 
@@ -52,6 +51,7 @@ export function MatchesScreen() {
     ensureChat,
     blockProfile,
     getChat,
+    getProfile,
   } = useDating();
   const { showToast } = useToast();
   const { height } = useWindowDimensions();
@@ -66,16 +66,14 @@ export function MatchesScreen() {
   const filteredIds = useMemo(
     () =>
       deckIds.filter((id) => {
-        const profile = profileById(id);
-        if (!profile) return false;
-        return (
-          profile.age >= preferences.minAge && profile.age <= preferences.maxAge
-        );
+        const item = getProfile(id);
+        if (!item) return false;
+        return item.age >= preferences.minAge && item.age <= preferences.maxAge;
       }),
-    [deckIds, preferences.minAge, preferences.maxAge]
+    [deckIds, preferences.minAge, preferences.maxAge, getProfile]
   );
 
-  const profile = profileById(filteredIds[0] ?? "");
+  const profile = getProfile(filteredIds[0] ?? "");
   const photoHeight = Math.round(Math.min(386, Math.max(270, height * 0.37)));
 
   useEffect(() => {

@@ -42,7 +42,6 @@ import { colors, radii, spacing } from "../../constants/theme";
 import { useAuth } from "../../context/AuthContext";
 import { useDating } from "../../context/DatingContext";
 import { useToast } from "../../context/ToastContext";
-import { coupleStories } from "../../data/couples";
 import type { AppStackParamList } from "../../navigation/types";
 import { formatRupees } from "../../utils/format";
 
@@ -126,42 +125,6 @@ export function SettingsScreen({ navigation }: Props) {
                 <Pill label="ACTIVE" tone="success" />
               </View>
             )}
-
-            <View style={styles.coupleSection}>
-              <View style={styles.coupleHeader}>
-                <View style={styles.divider} />
-                <Text style={styles.coupleTitle}>THEY MET ON PAGALPAGAL</Text>
-                <View style={styles.divider} />
-              </View>
-              <View style={styles.coupleCard}>
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={styles.coupleList}
-                >
-                  {coupleStories.map((story) => (
-                    <Pressable
-                      key={story.id}
-                      onPress={() =>
-                        showToast(
-                          `${story.names} found each other here. Your story is next.`,
-                          "info"
-                        )
-                      }
-                      style={({ pressed }) => [
-                        styles.couple,
-                        { opacity: pressed ? 0.7 : 1 },
-                      ]}
-                    >
-                      <Image source={story.photo} style={styles.couplePhoto} />
-                      <Text style={styles.coupleNames} numberOfLines={2}>
-                        {story.names}
-                      </Text>
-                    </Pressable>
-                  ))}
-                </ScrollView>
-              </View>
-            </View>
 
             <SectionLabel style={styles.section}>
               Liked / Skipped / Blocked profiles
@@ -483,7 +446,7 @@ function OrdersTab({
         />
       </CardGroup>
       <Text style={styles.ordersNote}>
-        Payments in this preview are simulated. No money is ever charged.
+        Your Plus purchases are processed securely through our payment provider.
       </Text>
     </>
   );

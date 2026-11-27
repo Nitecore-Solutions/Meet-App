@@ -31,7 +31,6 @@ import {
 import { colors, radii, spacing } from "../../constants/theme";
 import { useDating } from "../../context/DatingContext";
 import { useToast } from "../../context/ToastContext";
-import { profileById } from "../../data/profiles";
 import type { AppStackParamList } from "../../navigation/types";
 import type { ReportReason } from "../../types";
 import { formatChatTime } from "../../utils/format";
@@ -46,14 +45,15 @@ const prompts = [
 
 export function ChatScreen({ navigation, route }: Props) {
   const { profileId } = route.params;
-  const profile = profileById(profileId);
   const {
     chats,
+    getProfile,
     sendMessage,
     markChatRead,
     unmatch,
     blockProfile,
   } = useDating();
+  const profile = getProfile(profileId);
   const { showToast } = useToast();
   const [draft, setDraft] = useState("");
   const [unmatchOpen, setUnmatchOpen] = useState(false);

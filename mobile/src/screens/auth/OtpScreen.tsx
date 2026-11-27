@@ -83,7 +83,8 @@ export function OtpScreen({ navigation, route }: Props) {
           <View style={styles.previewCard}>
             <Text style={styles.previewLabel}>UI PREVIEW</Text>
             <Text style={styles.previewText}>
-              No backend URL is configured. Use 123456 as the demo code.
+              No backend URL is configured. Set EXPO_PUBLIC_API_BASE_URL in
+              mobile/.env and restart Expo.
             </Text>
           </View>
         ) : null}

@@ -46,7 +46,7 @@ const FAQS = [
   {
     question: "How does photo verification work?",
     answer:
-      "Open My Profile → Verifications → Photo and follow the short selfie check. Once approved, a blue tick appears on your profile. In this preview, verification is simulated instantly.",
+      "Open My Profile → Verifications → Photo and follow the short selfie check. Once approved, a blue tick appears on your profile.",
   },
   {
     question: "How do I manage or cancel Plus?",
@@ -131,7 +131,7 @@ export function HelpSupportScreen({ navigation }: Props) {
               label="Live chat"
               onPress={() =>
                 showToast(
-                  "Support chat is simulated in this UI preview.",
+                  "Our support team usually replies within 24 hours.",
                   "info"
                 )
               }

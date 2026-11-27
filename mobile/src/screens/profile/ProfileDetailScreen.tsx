@@ -40,7 +40,6 @@ import {
 import { colors, radii, shadow, spacing } from "../../constants/theme";
 import { useDating } from "../../context/DatingContext";
 import { useToast } from "../../context/ToastContext";
-import { profileById } from "../../data/profiles";
 import type { AppStackParamList } from "../../navigation/types";
 import type { ReportReason } from "../../types";
 
@@ -48,15 +47,16 @@ type Props = NativeStackScreenProps<AppStackParamList, "ProfileDetail">;
 
 export function ProfileDetailScreen({ navigation, route }: Props) {
   const { profileId } = route.params;
-  const profile = profileById(profileId);
   const { height } = useWindowDimensions();
   const {
     likedIds,
+    getProfile,
     likeProfile,
     blockProfile,
     ensureChat,
     getChat,
   } = useDating();
+  const profile = getProfile(profileId);
   const { showToast } = useToast();
   const [abusiveOpen, setAbusiveOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);

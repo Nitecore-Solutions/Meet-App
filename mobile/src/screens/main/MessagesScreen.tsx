@@ -17,24 +17,24 @@ import { EmptyState } from "../../components/EmptyState";
 import { ScreenHeader } from "../../components/ScreenHeader";
 import { colors, radii, spacing } from "../../constants/theme";
 import { useDating } from "../../context/DatingContext";
-import { profileById } from "../../data/profiles";
 import type { AppStackParamList } from "../../navigation/types";
+import type { Profile } from "../../types";
 import { formatChatTime } from "../../utils/format";
 
 export function MessagesScreen() {
   const navigation =
     useNavigation<NativeStackNavigationProp<AppStackParamList>>();
-  const { chats } = useDating();
+  const { chats, getProfile } = useDating();
 
   const rows = useMemo(
     () =>
       chats
         .map((chat) => ({
           chat,
-          profile: profileById(chat.profileId),
+          profile: getProfile(chat.profileId),
         }))
         .filter(
-          (row): row is { chat: (typeof chats)[number]; profile: NonNullable<ReturnType<typeof profileById>> } =>
+          (row): row is { chat: (typeof chats)[number]; profile: Profile } =>
             Boolean(row.profile)
         )
         .sort(
@@ -42,7 +42,7 @@ export function MessagesScreen() {
             new Date(b.chat.updatedAt).getTime() -
             new Date(a.chat.updatedAt).getTime()
         ),
-    [chats]
+    [chats, getProfile]
   );
 
   return (

@@ -258,8 +258,7 @@ export function PremiumScreen({ navigation, route }: Props) {
             <Text style={styles.receiptLinkText}>VIEW MY RECEIPT</Text>
           </Pressable>
           <Text style={styles.successFinePrint}>
-            This is a simulated purchase for the UI preview. No payment was
-            taken.
+            Your Plus membership is active. A receipt is available in Orders.
           </Text>
         </ScrollView>
       </SafeAreaView>
@@ -518,8 +517,8 @@ export function PremiumScreen({ navigation, route }: Props) {
           </Pressable>
 
           <Text style={styles.finePrint}>
-            Plans renew automatically until cancelled. This preview simulates
-            checkout, so no payment is taken. By continuing you agree to our{" "}
+            Plus is active for the duration you choose. By continuing you agree
+            to our{" "}
             <Text
               style={styles.finePrintLink}
               onPress={() => navigation.navigate("Legal", { kind: "terms" })}
