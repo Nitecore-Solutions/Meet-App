@@ -91,6 +91,7 @@ const paginationSchema = z.object({
   minAge: z.coerce.number().int().min(18).max(99).optional(),
   maxAge: z.coerce.number().int().min(18).max(99).optional(),
   city: z.string().trim().max(100).optional(),
+  radiusKm: z.coerce.number().int().min(1).max(500).optional(),
   showPhotosOnly: z
     .enum(["true", "false", "1", "0"])
     .optional()

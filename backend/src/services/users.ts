@@ -370,6 +370,7 @@ type DiscoveryFilters = {
   minAge?: number;
   maxAge?: number;
   city?: string;
+  radiusKm?: number;
   showPhotosOnly?: boolean;
   showOtherCities?: boolean;
 };
@@ -401,6 +402,23 @@ export async function discoverProfiles(userId: string, filters: DiscoveryFilters
   if (city && !showOtherCities) {
     params.push(city);
     clauses.push(`u.city = $${params.length}`);
+  }
+  // Location-based discovery: when the viewer has coordinates, only show
+  // nearby people who also shared theirs. Haversine distance in kilometres.
+  if (viewer.latitude != null && viewer.longitude != null) {
+    const radius = Math.min(Math.max(filters.radiusKm ?? viewer.radius_km ?? 100, 1), 500);
+    params.push(viewer.latitude, viewer.longitude, radius);
+    const latIndex = params.length - 2;
+    const lonIndex = params.length - 1;
+    const radiusIndex = params.length;
+    clauses.push(`(
+      u.latitude IS NOT NULL AND u.longitude IS NOT NULL AND
+      (6371 * acos(LEAST(1, GREATEST(-1,
+        COS(RADIANS($${latIndex})) * COS(RADIANS(u.latitude)) *
+          COS(RADIANS(u.longitude) - RADIANS($${lonIndex})) +
+        SIN(RADIANS($${latIndex})) * SIN(RADIANS(u.latitude))
+      )))) <= $${radiusIndex}
+    )`);
   }
   if (showPhotosOnly) {
     clauses.push(
